@@ -13,7 +13,7 @@ def sbatch_string(job_name):
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(current_npt, distance = -1, harwall_force = 1): # need to make it so that the harwall_force can change
+def create_colvars(current_npt, harwall_force = 1):
     """
     Creates the colvars file for a single npt run.
 
@@ -43,6 +43,7 @@ def create_colvars(current_npt, distance = -1, harwall_force = 1): # need to mak
     miny, maxy = midy - deltay, midy + deltay
     minz, maxz = midz - deltaz, midz + deltaz
     # reduce by distance of wall from protein
+    distance = -5
     minx += distance
     miny += distance
     minz += distance
@@ -172,7 +173,7 @@ run {}'''.format(current_npt, current_npt+1, current_npt+1, current_npt, npt_ste
     with open(file, "w") as f:
         f.write(config)
 
-def create_minmaxtcl(current_npt):
+def create_minmaxtcl(current_npt, extra):
     """
     Creates the tcl script to measure the boundaries of the protein after a npt run.
 
@@ -202,15 +203,15 @@ mol delete top'''.format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(minmaxtcl)
 
-def minmax_sbatch(current_npt):
+def minmax_sbatch(current_npt, extra):
     file = "minmax-npt" + str(current_npt) + ".sh"
-    sbatch_string("minmax_npt{}".format(current_npt))
+    s = sbatch_string("minmax_npt{}".format(current_npt))
     sh = "module load vmd\nvmd -e minmax-npt{}.tcl".format(current_npt)
     with open(file, "w") as f:
-        f.write(sbatch_string)
+        f.write(s)
         f.write(sh)
 
-def create_centretcl(current_npt):
+def create_centretcl(current_npt, extra):
     """
     Creates the tcl file to identify the centre of the protein after a npt run.
 
@@ -238,12 +239,12 @@ mol delete top'''.format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(centretcl)
 
-def centre_sbatch(current_npt):
+def centre_sbatch(current_npt, extra):
     file = "centre-npt" + str(current_npt) + ".sh"
-    sbatch_string("centre_npt{}".format(current_npt))
+    s= sbatch_string("centre_npt{}".format(current_npt))
     sh = "module load vmd\nvmd -e centre-npt{}.tcl".format(current_npt)
     with open(file, "w") as f:
-        f.write(sbatch_string)
+        f.write(s)
         f.write(sh)
 
 def read_minmax(input):
@@ -286,9 +287,19 @@ def read_centre(input):
     f.close()
     return array
 
+def job_submit(current_npt):
+    file = "npt" + str(current_npt) + "-consec.sh"
+    s = sbatch_string("npt{}-consec".format(current_npt))
+    input = conf_root + str(current_npt)
+    sh = "module load namd/2.14\n\nmpiexec.hydra -bootstrap=slurm namd2 {}.conf > {}.log\"".format(input, input)
+    with open(file, "w") as f:
+        f.write(s)
+        f.write(sh)
+
 if __name__ == "__main__":
 
     current_npt = sys.argv[1]
+    extra_arg = sys.argv[3]
 
     conf_root = "ubq-consec-npt" 
     colv_root = "ubq_colvars_consec_npt"
@@ -298,25 +309,18 @@ if __name__ == "__main__":
     index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
 
     if sys.argv[2] == "create_minmaxtcl":
-        create_minmaxtcl(current_npt)
+        create_minmaxtcl(current_npt, extra_arg)
     elif sys.argv[2] == "minmax_sbatch":
-        minmax_sbatch(current_npt)
+        minmax_sbatch(current_npt, extra_arg)
     elif sys.argv[2] == "create_centretcl":
-        create_centretcl(current_npt)
+        create_centretcl(current_npt, extra_arg)
     elif sys.argv[2] == "centre_sbatch":
-        centre_sbatch(current_npt)
+        centre_sbatch(current_npt, extra_arg)
     elif sys.argv[2] == "create_colvars":
-        create_colvars(current_npt)
-    elif sys.argv[2] == "colvars_sbatch":
-        colvars_sbatch(current_npt)
+        create_colvars(current_npt, extra_arg) # extra arg is harwall_force
     elif sys.argv[2] == "create_conf":
-        npt_steps = sys.argv[3]
-        create_conf(current_npt, npt_steps)
-    elif sys.argv[2] == "conf_sbatch":
-        conf_sbatch(current_npt)
-    # elif sys.argv[2] == "read_minmax":
-    #     read_minmax()
-    # elif sys.argv[2] == "read_centre":
-    #     read_centre()
+        create_conf(current_npt, extra_arg) # extra arg is npt_steps
+    elif sys.argv[2] == "job_submit":
+        job_submit(current_npt)
     else:
         pass
