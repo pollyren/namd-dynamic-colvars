@@ -291,7 +291,7 @@ def job_submit(current_npt, extra):
     file = "npt" + str(current_npt) + "-consec.sh"
     s = sbatch_string("npt{}-consec".format(current_npt))
     input = conf_root + str(current_npt)
-    sh = "module load namd/2.14\n\nmpiexec.hydra -bootstrap=slurm namd2 {}.conf > {}.log\"".format(input, input)
+    sh = "module load namd/2.14\n\nmpiexec.hydra -bootstrap=slurm namd2 \"{}.conf\" > \"{}.log\"".format(input, input)
     with open(file, "w") as f:
         f.write(s)
         f.write(sh)
