@@ -1,44 +1,5 @@
-# consec_colvars.py:
-
-starting_wall_dist = 0      # starting wall distance from the backbone of the protein
-decrement = 0               # decrement wall_dist interval
-freq = 0                    # frequency that the wall distance from edge of the protein is decremented
-harwall_force = 1           # force of harmonicWall 
-npt_steps = 500000          # number of steps for each npt run (how often wall is recalculated)
-
-conf_root = "ubq-consec-npt" 
-colv_root = "ubq_colvars_consec_npt"
-
-index = "0 4 17 18 19 21 34 35 36 38 53 54 55 57 73 74 75 77 89 90 91 93 111 112 113 115 125 126 127 129 144 145 146 148 158 159 160 162 165 166 167 169 187 188 189 191 201 202 203 205 220 221 222 224 234 235 236 238 253 254 255 257 268 269 270 272 284 285 286 288 299 300 301 305 313 314 315 317 324 325 326 328 336 337 338 340 350 351 352 354 369 370 371 373 384 385 386 388 398 399 400 402 414 415 416 418 436 437 438 440 446 447 448 450 468 469 470 472 487 488 489 491 504 505 506 508 516 517 518 520 538 539 540 542 553 554 555 557 560 561 562 564 579 580 581 585 593 594 595 599 607 608 609 611 619 620 621 623 636 637 638 640 653 654 655 657 677 678 679 681 696 697 698 700 715 716 717 719 735 736 737 739 745 746 747 749 752 753 754 756 774 775 776 778 791 792 793 795 810 811 812 814 825 826 827 829 837 838 839 841 844 845 846 848 868 869 870 872 882 883 884 886 901 902 903 905 912 913 914 916 924 925 926 928 945 946 947 949 959 960 961 963 978 979 980 982 995 996 997 999 1017 1018 1019 1021 1032 1033 1034 1036 1043 1044 1045 1047 1057 1058 1059 1061 1076 1077 1078 1080 1093 1094 1095 1097 1112 1113 1114 1116 1128 1129 1130 1132 1147 1148 1149 1151 1171 1172 1173"
-index_list = index.split()
-index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
-
-# centre
-midx, midy, midz = 14, 2, -8
-# midpoints
-minx = -10
-maxx = 39
-miny = -22
-maxy = 32
-minz = -22
-maxz = 12
-
-deltax = max(midx - minx, maxx - midx)
-deltay = max(midy - miny, maxy - midy)
-deltaz = max(midz - minz, maxz - midz)
-
-minx, maxx = midx - deltax, midx + deltax
-miny, maxy = midy - deltay, midy + deltay
-minz, maxz = midz - deltaz, midz + deltaz
-
-# how much to lower the wall by from the starting values
-lower = -decrement
-minx += lower
-miny += lower
-minz += lower
-maxx -= lower
-maxy -= lower
-maxz -= lower
+#!/usr/bin/python
+import sys
 
 def sbatch_string(job_name):
     """
@@ -52,7 +13,7 @@ def sbatch_string(job_name):
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(file, current_npt):
+def create_colvars(current_npt):
     """
     Creates the colvars file for a single npt run.
 
@@ -62,6 +23,7 @@ def create_colvars(file, current_npt):
 
     Output: None
     """
+    file = colv_root + str(current_npt) + ".conf"
     with open(file, "w") as f:
         f.write("# colvars for npt{}", current_npt)
         # x colvars
@@ -97,14 +59,15 @@ def create_colvars(file, current_npt):
             "\n\tupperWalls " + str(maxz) + 
             "\n\tforceConstant {}\n}".format(harwall_force))
 
-def colvars_sbatch(file, current_npt):
+def colvars_sbatch(current_npt):
+    file = colv_root + str(current_npt) + ".sh"
     sbatch_string("colvars_npt{}".format(current_npt))
     sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_colvars(\"ubq_colvars_consec_npt{}.conf\", {})\"".format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(sbatch_string)
         f.write(sh)
 
-def create_conf(file, current_npt):
+def create_conf(current_npt):
     """
     Creates the configuration file for a single npt run.
 
@@ -114,6 +77,7 @@ def create_conf(file, current_npt):
 
     Output: None
     """
+    file = conf_root + str(current_npt) + ".conf"
     config = '''#---------------Temperature -----------------------------------------------------------------
 set temperature		    300	
 
@@ -189,16 +153,17 @@ run {}'''.format(current_npt, current_npt+1, current_npt+1, current_npt, npt_ste
     with open(file, "w") as f:
         f.write(config)
 
-def conf_sbatch(file, current_npt):
+def conf_sbatch(current_npt):
+    file = conf_root + str(current_npt) + ".sh"
     sbatch_string("npt{}".format(current_npt))
     sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_conf(\"ubq-consec-npt{}.conf\", {})\"".format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(sbatch_string)
         f.write(sh)
 
-def create_minmaxtcl(file, current_npt):
+def create_minmaxtcl(current_npt):
     """
-    Creates the tcl file to measure the boundaries of the protein after a npt run.
+    Creates the tcl script to measure the boundaries of the protein after a npt run.
 
     Inputs:
         file (string): file name to write to
@@ -206,6 +171,7 @@ def create_minmaxtcl(file, current_npt):
 
     Output: None
     """
+    file = "minmax-npt" + str(current_npt) + ".tcl"
     minmaxtcl = '''set psf  ubq-denatured-solvate-ionised.psf
 set dcd  ubq-consec-npt{}.dcd
 mol load psf $psf dcd $dcd
@@ -225,14 +191,18 @@ mol delete top'''.format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(minmaxtcl)
 
-def minmax_sbatch(file, current_npt):
+def vmd_minmaxtcl(current_npt):
+    pass
+
+def minmax_sbatch(current_npt):
+    file = "minmax-npt" + str(current_npt) + ".sh"
     sbatch_string("minmax_npt{}".format(current_npt))
-    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_minmaxtcl(\"minmax-npt{}.conf\", {})\"".format(current_npt, current_npt)
+    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_minmaxtcl(\"minmax-npt{}.tcl\", {})\"".format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(sbatch_string)
         f.write(sh)
 
-def create_centretcl(file, current_npt):
+def create_centretcl(current_npt):
     """
     Creates the tcl file to identify the centre of the protein after a npt run.
 
@@ -242,6 +212,7 @@ def create_centretcl(file, current_npt):
 
     Output: None
     """
+    file = "centre-npt" + str(current_npt) + ".tcl"
     centretcl = '''set psf  ubq-denatured-solvate-ionised.psf
 set dcd  ubq-consec-npt{}.dcd
 mol load psf $psf dcd $dcd
@@ -259,9 +230,10 @@ mol delete top'''.format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(centretcl)
 
-def centre_sbatch(file, current_npt):
+def centre_sbatch(current_npt):
+    file = "centre-npt" + str(current_npt) + ".sh"
     sbatch_string("centre_npt{}".format(current_npt))
-    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_centretcl(\"centre-npt{}.conf\", {})\"".format(current_npt, current_npt)
+    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_centretcl(\"centre-npt{}.tcl\", {})\"".format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(sbatch_string)
         f.write(sh)
@@ -307,3 +279,77 @@ def read_centre(input):
     midx = array[0]
     midy = array[1]
     midz = array[2]
+
+if __name__ == "__main__":
+    current_npt = sys.argv[1]
+    
+    global starting_wall_dist
+    global decrement
+    global freq
+    global harwall_force
+    global npt_steps
+    global conf_root, colv_root
+    global index_list
+    global midx, midy, midz, minx, miny, minz, maxx, maxy, maxz
+    starting_wall_dist = 0      # starting wall distance from the backbone of the protein
+    decrement = 0               # decrement wall_dist interval
+    freq = 0                    # frequency that the wall distance from edge of the protein is decremented
+    harwall_force = 1           # force of harmonicWall 
+    npt_steps = 500000          # number of steps for each npt run (how often wall is recalculated)
+
+    conf_root = "ubq-consec-npt" 
+    colv_root = "ubq_colvars_consec_npt"
+
+    index = "0 4 17 18 19 21 34 35 36 38 53 54 55 57 73 74 75 77 89 90 91 93 111 112 113 115 125 126 127 129 144 145 146 148 158 159 160 162 165 166 167 169 187 188 189 191 201 202 203 205 220 221 222 224 234 235 236 238 253 254 255 257 268 269 270 272 284 285 286 288 299 300 301 305 313 314 315 317 324 325 326 328 336 337 338 340 350 351 352 354 369 370 371 373 384 385 386 388 398 399 400 402 414 415 416 418 436 437 438 440 446 447 448 450 468 469 470 472 487 488 489 491 504 505 506 508 516 517 518 520 538 539 540 542 553 554 555 557 560 561 562 564 579 580 581 585 593 594 595 599 607 608 609 611 619 620 621 623 636 637 638 640 653 654 655 657 677 678 679 681 696 697 698 700 715 716 717 719 735 736 737 739 745 746 747 749 752 753 754 756 774 775 776 778 791 792 793 795 810 811 812 814 825 826 827 829 837 838 839 841 844 845 846 848 868 869 870 872 882 883 884 886 901 902 903 905 912 913 914 916 924 925 926 928 945 946 947 949 959 960 961 963 978 979 980 982 995 996 997 999 1017 1018 1019 1021 1032 1033 1034 1036 1043 1044 1045 1047 1057 1058 1059 1061 1076 1077 1078 1080 1093 1094 1095 1097 1112 1113 1114 1116 1128 1129 1130 1132 1147 1148 1149 1151 1171 1172 1173"
+    index_list = index.split()
+    index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
+
+    # centre
+    midx, midy, midz = 14, 2, -8
+    # midpoints
+    minx = -10
+    maxx = 39
+    miny = -22
+    maxy = 32
+    minz = -22
+    maxz = 12
+
+    deltax = max(midx - minx, maxx - midx)
+    deltay = max(midy - miny, maxy - midy)
+    deltaz = max(midz - minz, maxz - midz)
+
+    minx, maxx = midx - deltax, midx + deltax
+    miny, maxy = midy - deltay, midy + deltay
+    minz, maxz = midz - deltaz, midz + deltaz
+
+    # how much to lower the wall by from the starting values
+    lower = -decrement
+    minx += lower
+    miny += lower
+    minz += lower
+    maxx -= lower
+    maxy -= lower
+    maxz -= lower
+
+    if sys.argv[2] == "create_minmaxtcl":
+        create_minmaxtcl(current_npt)
+    elif sys.argv[2] == "minmax_sbatch":
+        minmax_sbatch(current_npt)
+    elif sys.argv[2] == "create_centretcl":
+        create_centretcl(current_npt)
+    elif sys.argv[2] == "centre_sbatch":
+        centre_sbatch(current_npt)
+    elif sys.argv[2] == "create_colvars":
+        create_colvars(current_npt)
+    elif sys.argv[2] == "colvars_sbatch":
+        colvars_sbatch(current_npt)
+    elif sys.argv[2] == "create_conf":
+        create_conf(current_npt)
+    elif sys.argv[2] == "conf_sbatch":
+        conf_sbatch(current_npt)
+    elif sys.argv[2] == "read_minmax":
+        read_minmax()
+    elif sys.argv[2] == "read_centre":
+        read_centre()
+    else:
+        pass
