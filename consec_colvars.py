@@ -86,14 +86,6 @@ def create_colvars(current_npt, distance = -1, harwall_force = 1): # need to mak
             "\n\tupperWalls " + str(maxz) + 
             "\n\tforceConstant {}\n}".format(harwall_force))
 
-def colvars_sbatch(current_npt):
-    file = colv_root + str(current_npt) + ".sh"
-    sbatch_string("colvars_npt{}".format(current_npt))
-    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_colvars(\"ubq_colvars_consec_npt{}.conf\", {})\"".format(current_npt, current_npt)
-    with open(file, "w") as f:
-        f.write(sbatch_string)
-        f.write(sh)
-
 def create_conf(current_npt, npt_steps = 50000): 
     """
     Creates the configuration file for a single npt run.
@@ -179,14 +171,6 @@ PMEGridSpacing	        0.6
 run {}'''.format(current_npt, current_npt+1, current_npt+1, current_npt, npt_steps)
     with open(file, "w") as f:
         f.write(config)
-
-def conf_sbatch(current_npt):
-    file = conf_root + str(current_npt) + ".sh"
-    sbatch_string("npt{}".format(current_npt))
-    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_conf(\"ubq-consec-npt{}.conf\", {})\"".format(current_npt, current_npt)
-    with open(file, "w") as f:
-        f.write(sbatch_string)
-        f.write(sh)
 
 def create_minmaxtcl(current_npt):
     """
