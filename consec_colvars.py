@@ -191,13 +191,10 @@ mol delete top'''.format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(minmaxtcl)
 
-def vmd_minmaxtcl(current_npt):
-    pass
-
 def minmax_sbatch(current_npt):
     file = "minmax-npt" + str(current_npt) + ".sh"
     sbatch_string("minmax_npt{}".format(current_npt))
-    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_minmaxtcl(\"minmax-npt{}.tcl\", {})\"".format(current_npt, current_npt)
+    sh = "module load vmd\nvmd -e minmax-npt{}.tcl".format(current_npt)
     with open(file, "w") as f:
         f.write(sbatch_string)
         f.write(sh)
