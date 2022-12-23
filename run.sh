@@ -9,7 +9,7 @@
 
 ARG1 = ${1:-0}  # current npt
 ARG2 = ${2:-0}  # function name
-ARG3 = ${3:-0}  # function param
+ARG3 = ${3:-0}  # function param (optional)
 
 module load python
 python consec_colvars.py $1 $2 $3

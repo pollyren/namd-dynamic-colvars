@@ -287,7 +287,7 @@ def read_centre(input):
     f.close()
     return array
 
-def job_submit(current_npt):
+def job_submit(current_npt, extra):
     file = "npt" + str(current_npt) + "-consec.sh"
     s = sbatch_string("npt{}-consec".format(current_npt))
     input = conf_root + str(current_npt)
@@ -321,6 +321,6 @@ if __name__ == "__main__":
     elif sys.argv[2] == "create_conf":
         create_conf(current_npt, extra_arg) # extra arg is npt_steps
     elif sys.argv[2] == "job_submit":
-        job_submit(current_npt)
+        job_submit(current_npt, extra_arg)
     else:
         pass
