@@ -49,20 +49,22 @@ def sbatch_string(job_name):
 
     Output: a string containing the header of the sbatch file
     """
-    string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n".format(str(job_name))
+    string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(file):
+def create_colvars(file, current_npt):
     """
     Creates the colvars file for a single npt run.
 
     Inputs:
         file (string): file name to write to
+        current_npt (int): current npt number
 
     Output: None
     """
     with open(file, "w") as f:
-    # x colvars
+        f.write("# colvars for npt{}", current_npt)
+        # x colvars
         f.write("colvar {\n\tname xCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {")
         f.write(' '.join(index_list))
         f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom ({},{},{}})\n\t\t}\n\t\taxis {\n\t\t\t(1, 0, 0)\n\t\t}\n\t}\n}".format(midx, midy, midz))
@@ -94,6 +96,13 @@ def create_colvars(file):
             "\n\tlowerWalls " + str(minz) + 
             "\n\tupperWalls " + str(maxz) + 
             "\n\tforceConstant {}\n}".format(harwall_force))
+
+def colvars_sbatch(file, current_npt):
+    sbatch_string("colvars_npt{}".format(current_npt))
+    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_colvars(\"ubq_colvars_consec_npt{}.conf\", {})\"".format(current_npt, current_npt)
+    with open(file, "w") as f:
+        f.write(sbatch_string)
+        f.write(sh)
 
 def create_conf(file, current_npt):
     """
@@ -180,6 +189,13 @@ run {}'''.format(current_npt, current_npt+1, current_npt+1, current_npt, npt_ste
     with open(file, "w") as f:
         f.write(config)
 
+def conf_sbatch(file, current_npt):
+    sbatch_string("npt{}".format(current_npt))
+    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_conf(\"ubq-consec-npt{}.conf\", {})\"".format(current_npt, current_npt)
+    with open(file, "w") as f:
+        f.write(sbatch_string)
+        f.write(sh)
+
 def create_minmaxtcl(file, current_npt):
     """
     Creates the tcl file to measure the boundaries of the protein after a npt run.
@@ -209,6 +225,13 @@ mol delete top'''.format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(minmaxtcl)
 
+def minmax_sbatch(file, current_npt):
+    sbatch_string("minmax_npt{}".format(current_npt))
+    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_minmaxtcl(\"minmax-npt{}.conf\", {})\"".format(current_npt, current_npt)
+    with open(file, "w") as f:
+        f.write(sbatch_string)
+        f.write(sh)
+
 def create_centretcl(file, current_npt):
     """
     Creates the tcl file to identify the centre of the protein after a npt run.
@@ -236,19 +259,12 @@ mol delete top'''.format(current_npt, current_npt)
     with open(file, "w") as f:
         f.write(centretcl)
 
-def measure_minmax(file, current_npt):
-#     minmax_sbatch = sbatch_string("minmax_npt{}".format(current_npt))
-#     wait = '''# Wait for vmd to start
-# until pids=$(pidof vmd)
-# do   
-#     sleep 1
-# done'''
-#     with open(file, "w") as f:
-#         f.write(minmax_sbatch)
-#         f.write("\nmodule load vmd\nvmd -e minmax.tcl\n\n")
-#         f.write(wait)
-#         f.write("\n\nmeasure_minmax {}".format(current_npt))
-    pass
+def centre_sbatch(file, current_npt):
+    sbatch_string("centre_npt{}".format(current_npt))
+    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_centretcl(\"centre-npt{}.conf\", {})\"".format(current_npt, current_npt)
+    with open(file, "w") as f:
+        f.write(sbatch_string)
+        f.write(sh)
 
 def read_minmax(input):
     """
@@ -291,6 +307,3 @@ def read_centre(input):
     midx = array[0]
     midy = array[1]
     midz = array[2]
-
-def create_sh(file):
-    submit = sbatch_string()
