@@ -13,7 +13,7 @@ def sbatch_string(job_name):
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(current_npt, midx, midy, midz, minx, miny, minz, maxx, maxy, maxz, harwall_force = 1): # need to make it so that the harwall_force can change
+def create_colvars(current_npt, distance = -1, harwall_force = 1): # need to make it so that the harwall_force can change
     """
     Creates the colvars file for a single npt run.
 
@@ -23,6 +23,33 @@ def create_colvars(current_npt, midx, midy, midz, minx, miny, minz, maxx, maxy, 
 
     Output: None
     """
+    mid = read_centre("centre_npt{}.dat".format(current_npt))
+    minmax = read_minmax("minmax_npt{}.dat".format(current_npt))
+    midx = mid[0]
+    midy = mid[1]
+    midz = mid[2]
+    raw_minx = minmax[0]
+    raw_miny = minmax[1]
+    raw_minz = minmax[2]
+    raw_maxx = minmax[3]
+    raw_maxy = minmax[4]
+    raw_maxz = minmax[5]
+    # take the larger difference so the protein COM is the centre of the box
+    deltax = max(midx - raw_minx, raw_maxx - midx)
+    deltay = max(midy - raw_miny, raw_maxy - midy)
+    deltaz = max(midz - raw_minz, raw_maxz - midz)
+    # create adjusted min and max values
+    minx, maxx = midx - deltax, midx + deltax
+    miny, maxy = midy - deltay, midy + deltay
+    minz, maxz = midz - deltaz, midz + deltaz
+    # reduce by distance of wall from protein
+    minx += distance
+    miny += distance
+    minz += distance
+    maxx -= distance
+    maxy -= distance
+    maxz -= distance
+
     file = colv_root + str(current_npt) + ".conf"
     with open(file, "w") as f:
         f.write("# colvars for npt{}", current_npt)
@@ -230,7 +257,7 @@ mol delete top'''.format(current_npt, current_npt)
 def centre_sbatch(current_npt):
     file = "centre-npt" + str(current_npt) + ".sh"
     sbatch_string("centre_npt{}".format(current_npt))
-    sh = "module load python\npython -c \"import consec_colvars.py as c; c.create_centretcl(\"centre-npt{}.tcl\", {})\"".format(current_npt, current_npt)
+    sh = "module load vmd\nvmd -e centre-npt{}.tcl".format(current_npt)
     with open(file, "w") as f:
         f.write(sbatch_string)
         f.write(sh)
@@ -273,11 +300,10 @@ def read_centre(input):
     while line:
         array.append(float(line))
     f.close()
-    midx = array[0]
-    midy = array[1]
-    midz = array[2]
+    return array
 
 if __name__ == "__main__":
+
     current_npt = sys.argv[1]
 
     conf_root = "ubq-consec-npt" 
@@ -296,17 +322,7 @@ if __name__ == "__main__":
     elif sys.argv[2] == "centre_sbatch":
         centre_sbatch(current_npt)
     elif sys.argv[2] == "create_colvars":
-        midx = sys.argv[3]
-        midy = sys.argv[4]
-        midz = sys.argv[5]
-        minx = sys.argv[6]
-        miny = sys.argv[7]
-        minz = sys.argv[8]
-        maxx = sys.argv[9]
-        maxy = sys.argv[10]
-        maxz = sys.argv[11]
-        harwall_force = sys.argv[12]
-        create_colvars(current_npt, midx, midy, midz, minx, miny, minz, maxx, maxy, maxz, harwall_force)
+        create_colvars(current_npt)
     elif sys.argv[2] == "colvars_sbatch":
         colvars_sbatch(current_npt)
     elif sys.argv[2] == "create_conf":
