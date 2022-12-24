@@ -23,8 +23,8 @@ def create_colvars(current_npt, harwall_force = 1):
 
     Output: None
     """
-    mid = read_centre("centre_npt{}.dat".format(current_npt))
-    minmax = read_minmax("minmax_npt{}.dat".format(current_npt))
+    mid = read_centre("centre_npt{}.dat".format(current_npt-1))
+    minmax = read_minmax("minmax_npt{}.dat".format(current_npt-1))
     midx = mid[0]
     midy = mid[1]
     midz = mid[2]
@@ -169,7 +169,7 @@ cellOrigin	            0.00       0.00      0.00
 #---------------PME Parameters -------------------------------------------------------------
 PME		                yes
 PMEGridSpacing	        0.6
-run {}'''.format(current_npt, current_npt+1, current_npt+1, current_npt, npt_steps)
+run {}'''.format(current_npt-1, current_npt, current_npt, current_npt, npt_steps)
     with open(file, "w") as f:
         f.write(config)
 
