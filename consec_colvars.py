@@ -31,20 +31,20 @@ def create_colvars(input_npt, harwall_force, distance):
     midx = mid[0]
     midy = mid[1]
     midz = mid[2]
-    raw_minx = minmax[0]
-    raw_miny = minmax[1]
-    raw_minz = minmax[2]
-    raw_maxx = minmax[3]
-    raw_maxy = minmax[4]
-    raw_maxz = minmax[5]
-    # take the larger difference so the protein COM is the centre of the box
-    deltax = max(midx - raw_minx, raw_maxx - midx)
-    deltay = max(midy - raw_miny, raw_maxy - midy)
-    deltaz = max(midz - raw_minz, raw_maxz - midz)
-    # create adjusted min and max values
-    minx, maxx = midx - deltax, midx + deltax
-    miny, maxy = midy - deltay, midy + deltay
-    minz, maxz = midz - deltaz, midz + deltaz
+    minx = minmax[0]
+    miny = minmax[1]
+    minz = minmax[2]
+    maxx = minmax[3]
+    maxy = minmax[4]
+    maxz = minmax[5]
+    # # take the larger difference so the protein COM is the centre of the box
+    # deltax = max(midx - raw_minx, raw_maxx - midx)
+    # deltay = max(midy - raw_miny, raw_maxy - midy)
+    # deltaz = max(midz - raw_minz, raw_maxz - midz)
+    # # create adjusted min and max values
+    # minx, maxx = midx - deltax, midx + deltax
+    # miny, maxy = midy - deltay, midy + deltay
+    # minz, maxz = midz - deltaz, midz + deltaz
     # reduce by distance of wall from protein
     minx -= distance
     miny -= distance
@@ -346,17 +346,14 @@ if __name__ == "__main__":
     index_list = index.split()
     index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
 
-    prev_npt = start_npt
-    current_npt = prev_npt + 1
-    last_npt = start_npt + num_npts
-
-    for npt in range(num_npts):
+    for npt_runs in range(num_npts):
         for run in range(total_runs_per_distance):
+            npt = npt_runs * total_runs_per_distance + run
             create_minmaxtcl(npt-1)
             minmax_sbatch(npt-1)
             create_centretcl(npt-1)
             centre_sbatch(npt-1)
-            smart_submit("minmax-npt{}.sh".format(str(npt-1)))
+            smart_submit("minmax-npt{}.sh".format(str(npt-1)))  # edit sbatch functions so that file name is returned?
             smart_submit("centre-npt{}.sh".format(str(npt-1)))
             create_colvars(npt, harwall_force, start_distance)
             create_conf(npt, npt_steps)
