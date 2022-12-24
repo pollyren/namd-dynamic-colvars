@@ -169,7 +169,7 @@ cellOrigin	            0.00       0.00      0.00
 #---------------PME Parameters -------------------------------------------------------------
 PME		                yes
 PMEGridSpacing	        0.6
-run {}'''.format(input_npt-1, input_npt, input_npt, input_npt, npt_steps)
+run {}'''.format(input_npt, input_npt+1, input_npt+1, input_npt+1, npt_steps)
     with open(file, "w") as f:
         f.write(config)
 
