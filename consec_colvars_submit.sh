@@ -13,9 +13,11 @@ npt_steps=500000          # number of steps for each npt run (how often wall is 
 total_runs=100
 last_npt=$((current_npt+total_runs))
 
+job_submit=$(sbatch --wait pass.sh | cut -f 4 -d' ')
+
 for ((i=0; i<$total_runs; i++));
 do
-    create_minmaxtcl=$(sbatch --wait run.sh $prev_npt create_minmaxtcl | cut -f 4 -d' ')
+    create_minmaxtcl=$(sbatch --wait --dependency=afterok:$job_submit run.sh $prev_npt create_minmaxtcl | cut -f 4 -d' ')
     create_minmax_sbatch=$(sbatch --wait --dependency=afterok:$create_minmaxtcl run.sh $prev_npt minmax_sbatch | cut -f 4 -d' ')
     minmax_submit=$(sbatch --wait --dependency=afterok:$create_minmax_sbatch minmax-npt$prev_npt.sh | cut -f 4 -d' ')
 

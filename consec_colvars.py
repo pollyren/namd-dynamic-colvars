@@ -194,7 +194,7 @@ set measure [measure minmax $sel]
 set outfile [open ./minmax_npt{}.dat w]
 for {{set i 0}} {{$i < 2}} {{incr i}} {{
     for {{set j 0}} {{$j < 3}} {{incr j}} {{
-        puts $outfile \"lindex $measure $i $\"
+        puts $outfile [lindex $measure $i $j]
     }}
 }}
 close $outfile
@@ -231,7 +231,7 @@ set measure [measure center $sel]
 
 set outfile [open ./centre_npt{}.dat w]
 for {{set i 0}} {{$i < 3}} {{incr i}} {{
-    puts $outfile \"lindex $measure $i\"
+    puts $outfile [lindex $measure $i]
 }}
 close $outfile
 $sel delete
@@ -298,8 +298,8 @@ def job_submit(input_npt, extra):
 
 if __name__ == "__main__":
 
-    input_npt = sys.argv[1]
-    extra_arg = sys.argv[3]
+    input_npt = int(sys.argv[1])
+    extra_arg = int(sys.argv[3])
 
     conf_root = "ubq-consec-npt" 
     colv_root = "ubq_colvars_consec_npt"
