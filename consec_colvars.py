@@ -1,5 +1,8 @@
 #!/usr/bin/python
 import sys
+import os
+import time
+import re
 
 def sbatch_string(job_name):
     """
@@ -296,10 +299,29 @@ def job_submit(input_npt, extra):
         f.write(s)
         f.write(sh)
 
-if __name__ == "__main__":
+def smart_submit(job):
+    cmd = os.popen("sbatch " + job)
+    time.sleep(2)
+    jobid = re.search("(\d+)", cmd.readlines()[0]).group(1)
+    cmd.close()
+    print(jobid)
+    while True:
+        time.sleep(60)
+        squeue = os.popen("squeue -u pollyren")
+        time.sleep(2)
+        queue = "\n".join(squeue.readlines())
+        squeue.close()
+        if jobid not in queue:
+            break
 
+if __name__ == "__main__":
+    nameh = os.popen("whoami")
+    time.sleep(1)
+    username = nameh.readlines()[0].strip()
+    nameh.close()
+    
     input_npt = int(sys.argv[1])
-    extra_arg = int(sys.argv[3])
+    extra_arg = sys.argv[3]
 
     conf_root = "ubq-consec-npt" 
     colv_root = "ubq_colvars_consec_npt"
@@ -309,18 +331,20 @@ if __name__ == "__main__":
     index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
 
     if sys.argv[2] == "create_minmaxtcl":
-        create_minmaxtcl(input_npt, extra_arg)
+        create_minmaxtcl(input_npt, int(extra_arg))
     elif sys.argv[2] == "minmax_sbatch":
-        minmax_sbatch(input_npt, extra_arg)
+        minmax_sbatch(input_npt, int(extra_arg))
     elif sys.argv[2] == "create_centretcl":
-        create_centretcl(input_npt, extra_arg)
+        create_centretcl(input_npt, int(extra_arg))
     elif sys.argv[2] == "centre_sbatch":
-        centre_sbatch(input_npt, extra_arg)
+        centre_sbatch(input_npt, int(extra_arg))
     elif sys.argv[2] == "create_colvars":
-        create_colvars(input_npt, extra_arg) # extra arg is harwall_force
+        create_colvars(input_npt, int(extra_arg)) # extra arg is harwall_force
     elif sys.argv[2] == "create_conf":
-        create_conf(input_npt, extra_arg) # extra arg is npt_steps
+        create_conf(input_npt, int(extra_arg)) # extra arg is npt_steps
     elif sys.argv[2] == "job_submit":
-        job_submit(input_npt, extra_arg)
+        job_submit(input_npt, int(extra_arg))
+    elif sys.argv[2] == "smart_submit":
+        smart_submit(extra_arg)
     else:
         pass
