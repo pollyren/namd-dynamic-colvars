@@ -16,7 +16,7 @@ def sbatch_string(job_name):
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(input_npt, harwall_force = 1):
+def create_colvars(input_npt, harwall_force, distance):
     """
     Creates the colvars file for a single npt run.
 
@@ -46,13 +46,12 @@ def create_colvars(input_npt, harwall_force = 1):
     miny, maxy = midy - deltay, midy + deltay
     minz, maxz = midz - deltaz, midz + deltaz
     # reduce by distance of wall from protein
-    distance = -5
-    minx += distance
-    miny += distance
-    minz += distance
-    maxx -= distance
-    maxy -= distance
-    maxz -= distance
+    minx -= distance
+    miny -= distance
+    minz -= distance
+    maxx += distance
+    maxy += distance
+    maxz += distance
 
     file = colv_root + str(input_npt) + ".conf"
     with open(file, "w") as f:
@@ -90,7 +89,7 @@ def create_colvars(input_npt, harwall_force = 1):
             "\n\tupperWalls " + str(maxz) + 
             "\n\tforceConstant {}\n}".format(harwall_force))
 
-def create_conf(input_npt, npt_steps = 50000): 
+def create_conf(input_npt, npt_steps): 
     """
     Creates the configuration file for a single npt run.
 
@@ -176,7 +175,7 @@ run {}'''.format(input_npt, input_npt+1, input_npt+1, input_npt+1, npt_steps)
     with open(file, "w") as f:
         f.write(config)
 
-def create_minmaxtcl(input_npt, extra):
+def create_minmaxtcl(input_npt):
     """
     Creates the tcl script to measure the boundaries of the protein after a npt run.
 
@@ -206,7 +205,7 @@ mol delete top'''.format(input_npt, input_npt)
     with open(file, "w") as f:
         f.write(minmaxtcl)
 
-def minmax_sbatch(input_npt, extra):
+def minmax_sbatch(input_npt):
     file = "minmax-npt" + str(input_npt) + ".sh"
     s = sbatch_string("minmax_npt{}".format(input_npt))
     sh = "module load vmd\nvmd -e minmax-npt{}.tcl".format(input_npt)
@@ -214,7 +213,7 @@ def minmax_sbatch(input_npt, extra):
         f.write(s)
         f.write(sh)
 
-def create_centretcl(input_npt, extra):
+def create_centretcl(input_npt):
     """
     Creates the tcl file to identify the centre of the protein after a npt run.
 
@@ -242,7 +241,7 @@ mol delete top'''.format(input_npt, input_npt)
     with open(file, "w") as f:
         f.write(centretcl)
 
-def centre_sbatch(input_npt, extra):
+def centre_sbatch(input_npt):
     file = "centre-npt" + str(input_npt) + ".sh"
     s= sbatch_string("centre_npt{}".format(input_npt))
     sh = "module load vmd\nvmd -e centre-npt{}.tcl".format(input_npt)
@@ -290,7 +289,7 @@ def read_centre(input):
     f.close()
     return array
 
-def job_submit(input_npt, extra):
+def job_submit(input_npt):
     file = "npt" + str(input_npt) + "-consec.sh"
     s = sbatch_string("npt{}-consec".format(input_npt))
     input = conf_root + str(input_npt)
@@ -299,15 +298,15 @@ def job_submit(input_npt, extra):
         f.write(s)
         f.write(sh)
 
-def smart_submit(job):
-    cmd = os.popen("sbatch " + job)
+def smart_submit(job_name):
+    cmd = os.popen("sbatch " + job_name)
     time.sleep(2)
     jobid = re.search("(\d+)", cmd.readlines()[0]).group(1)
     cmd.close()
-    print(jobid)
+    # print(jobid)
     while True:
         time.sleep(60)
-        squeue = os.popen("squeue -u pollyren")
+        squeue = os.popen("squeue -u {}".format(username))
         time.sleep(2)
         queue = "\n".join(squeue.readlines())
         squeue.close()
@@ -315,14 +314,31 @@ def smart_submit(job):
             break
 
 if __name__ == "__main__":
-    nameh = os.popen("whoami")
-    time.sleep(1)
-    username = nameh.readlines()[0].strip()
-    nameh.close()
-    
-    input_npt = int(sys.argv[1])
-    extra_arg = sys.argv[3]
+    """
+    Usage: python consec_colvars.py start_npt total_runs_per_distance decrement_dist npt_steps harwall_force
+           start_npt (int): starting npt number
+           num_npts (int): total number of npts to be run
+           start_distance (int): beginning wall distance from the minmax of the protein
+           total_runs_per_distance (int): number of npts to run at each wall distance
+           decrement_dist (int): amount to lower wall by
+           npt_steps (int): number of steps between wall recalculation 
+           harwall_force (int): force of colvars harmonic wall
+    """
+    start_npt = int(sys.argv[1])
+    num_npts = int(sys.argv[2])
+    start_distance = int(sys.argv[3])
+    total_runs_per_distance = int(sys.argv[4])
+    decrement_dist = int(sys.argv[5])
+    npt_steps = int(sys.argv[6])
+    harwall_force = int(sys.argv[7])
 
+    global username
+    name = os.popen("whoami")
+    time.sleep(1)
+    username = name.readlines()[0].strip()
+    name.close()
+
+    global conf_root, colv_root
     conf_root = "ubq-consec-npt" 
     colv_root = "ubq_colvars_consec_npt"
 
@@ -330,21 +346,20 @@ if __name__ == "__main__":
     index_list = index.split()
     index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
 
-    if sys.argv[2] == "create_minmaxtcl":
-        create_minmaxtcl(input_npt, int(extra_arg))
-    elif sys.argv[2] == "minmax_sbatch":
-        minmax_sbatch(input_npt, int(extra_arg))
-    elif sys.argv[2] == "create_centretcl":
-        create_centretcl(input_npt, int(extra_arg))
-    elif sys.argv[2] == "centre_sbatch":
-        centre_sbatch(input_npt, int(extra_arg))
-    elif sys.argv[2] == "create_colvars":
-        create_colvars(input_npt, int(extra_arg)) # extra arg is harwall_force
-    elif sys.argv[2] == "create_conf":
-        create_conf(input_npt, int(extra_arg)) # extra arg is npt_steps
-    elif sys.argv[2] == "job_submit":
-        job_submit(input_npt, int(extra_arg))
-    elif sys.argv[2] == "smart_submit":
-        smart_submit(extra_arg)
-    else:
-        pass
+    prev_npt = start_npt
+    current_npt = prev_npt + 1
+    last_npt = start_npt + num_npts
+
+    for npt in range(num_npts):
+        for run in range(total_runs_per_distance):
+            create_minmaxtcl(npt-1)
+            minmax_sbatch(npt-1)
+            create_centretcl(npt-1)
+            centre_sbatch(npt-1)
+            smart_submit("minmax-npt{}.sh".format(str(npt-1)))
+            smart_submit("centre-npt{}.sh".format(str(npt-1)))
+            create_colvars(npt, harwall_force, start_distance)
+            create_conf(npt, npt_steps)
+            job_submit(npt)
+            smart_submit("npt{}-consec.sh".format(str(npt)))
+        start_distance -= decrement_dist
