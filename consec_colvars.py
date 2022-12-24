@@ -13,18 +13,18 @@ def sbatch_string(job_name):
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(current_npt, harwall_force = 1):
+def create_colvars(input_npt, harwall_force = 1):
     """
     Creates the colvars file for a single npt run.
 
     Inputs:
         file (string): file name to write to
-        current_npt (int): current npt number
+        input_npt (int): current npt number
 
     Output: None
     """
-    mid = read_centre("centre_npt{}.dat".format(current_npt-1))
-    minmax = read_minmax("minmax_npt{}.dat".format(current_npt-1))
+    mid = read_centre("centre_npt{}.dat".format(input_npt-1))
+    minmax = read_minmax("minmax_npt{}.dat".format(input_npt-1))
     midx = mid[0]
     midy = mid[1]
     midz = mid[2]
@@ -51,9 +51,9 @@ def create_colvars(current_npt, harwall_force = 1):
     maxy -= distance
     maxz -= distance
 
-    file = colv_root + str(current_npt) + ".conf"
+    file = colv_root + str(input_npt) + ".conf"
     with open(file, "w") as f:
-        f.write("# colvars for npt{}", current_npt)
+        f.write("# colvars for npt{}", input_npt)
         # x colvars
         f.write("colvar {\n\tname xCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {")
         f.write(' '.join(index_list))
@@ -87,17 +87,17 @@ def create_colvars(current_npt, harwall_force = 1):
             "\n\tupperWalls " + str(maxz) + 
             "\n\tforceConstant {}\n}".format(harwall_force))
 
-def create_conf(current_npt, npt_steps = 50000): 
+def create_conf(input_npt, npt_steps = 50000): 
     """
     Creates the configuration file for a single npt run.
 
     Inputs:
         file (string): file name to write to
-        current_npt (int): current npt number
+        input_npt (int): current npt number
 
     Output: None
     """
-    file = conf_root + str(current_npt) + ".conf"
+    file = conf_root + str(input_npt) + ".conf"
     config = '''#---------------Temperature -----------------------------------------------------------------
 set temperature		    300	
 
@@ -169,21 +169,21 @@ cellOrigin	            0.00       0.00      0.00
 #---------------PME Parameters -------------------------------------------------------------
 PME		                yes
 PMEGridSpacing	        0.6
-run {}'''.format(current_npt-1, current_npt, current_npt, current_npt, npt_steps)
+run {}'''.format(input_npt-1, input_npt, input_npt, input_npt, npt_steps)
     with open(file, "w") as f:
         f.write(config)
 
-def create_minmaxtcl(current_npt, extra):
+def create_minmaxtcl(input_npt, extra):
     """
     Creates the tcl script to measure the boundaries of the protein after a npt run.
 
     Inputs:
         file (string): file name to write to
-        current_npt (int): current npt number
+        input_npt (int): current npt number
 
     Output: None
     """
-    file = "minmax-npt" + str(current_npt) + ".tcl"
+    file = "minmax-npt" + str(input_npt) + ".tcl"
     minmaxtcl = '''set psf  ubq-denatured-solvate-ionised.psf
 set dcd  ubq-consec-npt{}.dcd
 mol load psf $psf dcd $dcd
@@ -194,34 +194,34 @@ set measure [measure minmax $sel]
 set outfile [open ./minmax_npt{}.dat w]
 for {{set i 0}} {{$i < 2}} {{incr i}} {{
     for {{set j 0}} {{$j < 3}} {{incr j}} {{
-        puts $outfile {{lindex $measure $i $j}}
+        puts $outfile \"lindex $measure $i $\"
     }}
 }}
 close $outfile
 $sel delete
-mol delete top'''.format(current_npt, current_npt)
+mol delete top'''.format(input_npt, input_npt)
     with open(file, "w") as f:
         f.write(minmaxtcl)
 
-def minmax_sbatch(current_npt, extra):
-    file = "minmax-npt" + str(current_npt) + ".sh"
-    s = sbatch_string("minmax_npt{}".format(current_npt))
-    sh = "module load vmd\nvmd -e minmax-npt{}.tcl".format(current_npt)
+def minmax_sbatch(input_npt, extra):
+    file = "minmax-npt" + str(input_npt) + ".sh"
+    s = sbatch_string("minmax_npt{}".format(input_npt))
+    sh = "module load vmd\nvmd -e minmax-npt{}.tcl".format(input_npt)
     with open(file, "w") as f:
         f.write(s)
         f.write(sh)
 
-def create_centretcl(current_npt, extra):
+def create_centretcl(input_npt, extra):
     """
     Creates the tcl file to identify the centre of the protein after a npt run.
 
     Inputs:
         file (string): file name to write to
-        current_npt (int): current npt number
+        input_npt (int): current npt number
 
     Output: None
     """
-    file = "centre-npt" + str(current_npt) + ".tcl"
+    file = "centre-npt" + str(input_npt) + ".tcl"
     centretcl = '''set psf  ubq-denatured-solvate-ionised.psf
 set dcd  ubq-consec-npt{}.dcd
 mol load psf $psf dcd $dcd
@@ -231,18 +231,18 @@ set measure [measure center $sel]
 
 set outfile [open ./centre_npt{}.dat w]
 for {{set i 0}} {{$i < 3}} {{incr i}} {{
-    puts $outfile {{lindex $measure $i}}
+    puts $outfile \"lindex $measure $i\"
 }}
 close $outfile
 $sel delete
-mol delete top'''.format(current_npt, current_npt)
+mol delete top'''.format(input_npt, input_npt)
     with open(file, "w") as f:
         f.write(centretcl)
 
-def centre_sbatch(current_npt, extra):
-    file = "centre-npt" + str(current_npt) + ".sh"
-    s= sbatch_string("centre_npt{}".format(current_npt))
-    sh = "module load vmd\nvmd -e centre-npt{}.tcl".format(current_npt)
+def centre_sbatch(input_npt, extra):
+    file = "centre-npt" + str(input_npt) + ".sh"
+    s= sbatch_string("centre_npt{}".format(input_npt))
+    sh = "module load vmd\nvmd -e centre-npt{}.tcl".format(input_npt)
     with open(file, "w") as f:
         f.write(s)
         f.write(sh)
@@ -287,10 +287,10 @@ def read_centre(input):
     f.close()
     return array
 
-def job_submit(current_npt, extra):
-    file = "npt" + str(current_npt) + "-consec.sh"
-    s = sbatch_string("npt{}-consec".format(current_npt))
-    input = conf_root + str(current_npt)
+def job_submit(input_npt, extra):
+    file = "npt" + str(input_npt) + "-consec.sh"
+    s = sbatch_string("npt{}-consec".format(input_npt))
+    input = conf_root + str(input_npt)
     sh = "module load namd/2.14\n\nmpiexec.hydra -bootstrap=slurm namd2 \"{}.conf\" > \"{}.log\"".format(input, input)
     with open(file, "w") as f:
         f.write(s)
@@ -298,7 +298,7 @@ def job_submit(current_npt, extra):
 
 if __name__ == "__main__":
 
-    current_npt = sys.argv[1]
+    input_npt = sys.argv[1]
     extra_arg = sys.argv[3]
 
     conf_root = "ubq-consec-npt" 
@@ -309,18 +309,18 @@ if __name__ == "__main__":
     index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
 
     if sys.argv[2] == "create_minmaxtcl":
-        create_minmaxtcl(current_npt, extra_arg)
+        create_minmaxtcl(input_npt, extra_arg)
     elif sys.argv[2] == "minmax_sbatch":
-        minmax_sbatch(current_npt, extra_arg)
+        minmax_sbatch(input_npt, extra_arg)
     elif sys.argv[2] == "create_centretcl":
-        create_centretcl(current_npt, extra_arg)
+        create_centretcl(input_npt, extra_arg)
     elif sys.argv[2] == "centre_sbatch":
-        centre_sbatch(current_npt, extra_arg)
+        centre_sbatch(input_npt, extra_arg)
     elif sys.argv[2] == "create_colvars":
-        create_colvars(current_npt, extra_arg) # extra arg is harwall_force
+        create_colvars(input_npt, extra_arg) # extra arg is harwall_force
     elif sys.argv[2] == "create_conf":
-        create_conf(current_npt, extra_arg) # extra arg is npt_steps
+        create_conf(input_npt, extra_arg) # extra arg is npt_steps
     elif sys.argv[2] == "job_submit":
-        job_submit(current_npt, extra_arg)
+        job_submit(input_npt, extra_arg)
     else:
         pass
