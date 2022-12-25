@@ -40,13 +40,26 @@ if __name__ == "__main__":
     """
     Usage: python consec_colvars.py first_npt num_npts distance total_runs_per_distance decrement_dist npt_steps harwall_force
            first_npt (int): starting npt number, the first npt to be run
+                            directory should contain relevant files with prefix ubq-consec-npt{first_npt - 1}
            num_npts (int): total number of npts to be run
            distance (int): beginning wall distance from the minmax of the protein
            total_runs_per_distance (int): number of npts to run at each wall distance
-           decrement_dist (int): amount to lower wall by
+           decrement_dist (int): amount to lower wall by after each npt
            npt_steps (int): number of steps between wall recalculation 
            harwall_force (int): force of colvars harmonic wall
     """
+    if sys.argv[1] == "-h":
+        print(" Usage: python generate_sh.py first_npt num_npts distance total_runs_per_distance decrement_dist npt_steps harwall_force")
+        print("        first_npt (int): starting npt number, the first npt to be run")
+        print("                         directory should contain relevant files with prefix ubq-consec-npt{first_npt - 1}")
+        print("        num_npts (int): total number of npts to be run")
+        print("        distance (int): beginning wall distance from the minmax of the protein")
+        print("        total_runs_per_distance (int): number of npts to run at each wall distance")
+        print("        decrement_dist (int): amount to lower wall by")
+        print("        npt_steps (int): number of steps between wall recalculation")
+        print("        harwall_force (int): force of colvars harmonic wall")
+        sys.exit()
+
     first = int(sys.argv[1])
     num_npts = int(sys.argv[2])
     distance = int(sys.argv[3])
@@ -64,5 +77,5 @@ if __name__ == "__main__":
 
     create_dependency_sh(jobs)
 
-    # cmd = os.popen("sh run.sh")
-    # cmd.close()
+    cmd = os.popen("sh run.sh")
+    cmd.close()
