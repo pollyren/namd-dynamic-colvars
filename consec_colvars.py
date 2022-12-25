@@ -302,7 +302,7 @@ def smart_submit(job_name):
     print(jobid)
     while True:
         time.sleep(60)
-        squeue = os.popen("squeue -u pollyren")
+        squeue = os.popen("squeue -u {}".format(username))
         time.sleep(2)
         queue = "\n".join(squeue.readlines())
         squeue.close()
@@ -312,21 +312,17 @@ def smart_submit(job_name):
 if __name__ == "__main__":
     """
     Usage: python consec_colvars.py start_npt total_runs_per_distance decrement_dist npt_steps harwall_force
-           start_npt (int): starting npt number, the first npt to be run
-           num_npts (int): total number of npts to be run
-           start_distance (int): beginning wall distance from the minmax of the protein
+           start_npt (int): starting npt number, the first npt to be run in this sequence
+           distance (int): wall distance from the minmax of the protein
            total_runs_per_distance (int): number of npts to run at each wall distance
-           decrement_dist (int): amount to lower wall by
            npt_steps (int): number of steps between wall recalculation 
            harwall_force (int): force of colvars harmonic wall
     """
     start_npt = int(sys.argv[1])
-    num_npts = int(sys.argv[2])
-    start_distance = int(sys.argv[3])
-    total_runs_per_distance = int(sys.argv[4])
-    decrement_dist = int(sys.argv[5])
-    npt_steps = int(sys.argv[6])
-    harwall_force = int(sys.argv[7])
+    distance = int(sys.argv[2])
+    total_runs_per_distance = int(sys.argv[3])
+    npt_steps = int(sys.argv[4])
+    harwall_force = int(sys.argv[5])
 
     global username
     name = os.popen("whoami")
@@ -342,17 +338,17 @@ if __name__ == "__main__":
     index_list = index.split()
     index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
 
-    for npt_runs in range(num_npts):
-        for run in range(total_runs_per_distance):
-            npt = npt_runs * total_runs_per_distance + run + start_npt
-            create_minmaxtcl(npt-1)
-            minmax_sbatch(npt-1)
-            create_centretcl(npt-1)
-            centre_sbatch(npt-1)
-            smart_submit("minmax-npt{}.sh".format(str(npt-1)))  # edit sbatch functions so that file name is returned?
-            smart_submit("centre-npt{}.sh".format(str(npt-1)))
-            create_colvars(npt, harwall_force, start_distance)
-            create_conf(npt, npt_steps)
-            job_submit(npt)
-            smart_submit("npt{}-consec.sh".format(str(npt)))
-        start_distance -= decrement_dist
+    # for npt_runs in range(num_npts):
+    for run in range(total_runs_per_distance):
+        npt = run + start_npt
+        create_minmaxtcl(npt-1)
+        minmax_sbatch(npt-1)
+        create_centretcl(npt-1)
+        centre_sbatch(npt-1)
+        smart_submit("minmax-npt{}.sh".format(str(npt-1)))  # edit sbatch functions so that file name is returned?
+        smart_submit("centre-npt{}.sh".format(str(npt-1)))
+        create_colvars(npt, harwall_force, distance)
+        create_conf(npt, npt_steps)
+        job_submit(npt)
+        smart_submit("npt{}-consec.sh".format(str(npt)))
+        # start_distance -= decrement_dist
