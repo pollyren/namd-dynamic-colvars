@@ -26,12 +26,13 @@ def create_individual_sbatch(job_num, start_npt, distance, total_runs_per_distan
 def create_dependency_sh(individual_shs):
     length = len(individual_shs)
     f = open("run.sh", "w")
+    f.write("#!/bin/bash\n\n")
     for i in range(length):
         if i == 0: 
-            s = "job{}=$(sbatch {} | cut -f 4 -d' ')".format(i, individual_shs[i])
+            s = "job{}=$(sbatch {} | cut -f 4 -d' ')\n".format(i, individual_shs[i])
             f.write(s)
         else:
-            s = "job{}=$(sbatch --dependency=afterok:$job{} {} | cut -f 4 -d' ')".format(i, i-1, individual_shs[i])
+            s = "job{}=$(sbatch --dependency=afterok:$job{} {} | cut -f 4 -d' ')\n".format(i, i-1, individual_shs[i])
             f.write(s)
     f.close()
 
@@ -63,5 +64,5 @@ if __name__ == "__main__":
 
     create_dependency_sh(jobs)
 
-    cmd = os.popen("sh run.sh")
-    cmd.close()
+    # cmd = os.popen("sh run.sh")
+    # cmd.close()
