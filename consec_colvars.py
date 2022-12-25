@@ -4,25 +4,26 @@ import os
 import time
 import re
 
-def sbatch_string(job_name):
+def sbatch_string(job_name: str) -> str:
     """
     Generates a string for the sbatch file header.
 
     Inputs:
         job_name (string): name of the job
 
-    Output: a string containing the header of the sbatch file
+    Output: a string containing the header of the sbatch file (string)
     """
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(input_npt, harwall_force, distance = 5):
+def create_colvars(input_npt: int, harwall_force: int, distance: int) -> None:
     """
     Creates the colvars file for a single npt run.
 
     Inputs:
-        file (string): file name to write to
         input_npt (int): current npt number
+        harwall_force (int): force for harmonicWall constraint
+        distance (int): distance of wall from backbone of protein
 
     Output: None
     """
@@ -89,13 +90,13 @@ def create_colvars(input_npt, harwall_force, distance = 5):
             "\n\tupperWalls " + str(maxz) + 
             "\n\tforceConstant {}\n}}".format(harwall_force))
 
-def create_conf(input_npt, npt_steps): 
+def create_conf(input_npt: int, npt_steps: int) -> None: 
     """
     Creates the configuration file for a single npt run.
 
     Inputs:
-        file (string): file name to write to
         input_npt (int): current npt number
+        npt_steps (int): number of steps to run a single npt
 
     Output: None
     """
@@ -175,12 +176,11 @@ run {}'''.format(input_npt-1, input_npt, input_npt, input_npt, npt_steps)
     with open(file, "w") as f:
         f.write(config)
 
-def create_minmaxtcl(input_npt):
+def create_minmaxtcl(input_npt: int) -> None:
     """
     Creates the tcl script to measure the boundaries of the protein after a npt run.
 
     Inputs:
-        file (string): file name to write to
         input_npt (int): current npt number
 
     Output: None
@@ -205,7 +205,15 @@ mol delete top'''.format(input_npt, input_npt)
     with open(file, "w") as f:
         f.write(minmaxtcl)
 
-def minmax_sbatch(input_npt):
+def minmax_sbatch(input_npt: int) -> None:
+    """
+    Creates the sbatch script to submit minmax job.
+
+    Inputs:
+        input_npt (int): current npt number
+
+    Output: None
+    """
     file = "minmax-npt" + str(input_npt) + ".sh"
     s = sbatch_string("minmax_npt{}".format(input_npt))
     sh = "module load vmd\nvmd -e minmax-npt{}.tcl".format(input_npt)
@@ -213,12 +221,11 @@ def minmax_sbatch(input_npt):
         f.write(s)
         f.write(sh)
 
-def create_centretcl(input_npt):
+def create_centretcl(input_npt: int) -> None:
     """
     Creates the tcl file to identify the centre of the protein after a npt run.
 
     Inputs:
-        file (string): file name to write to
         input_npt (int): current npt number
 
     Output: None
@@ -241,7 +248,15 @@ mol delete top'''.format(input_npt, input_npt)
     with open(file, "w") as f:
         f.write(centretcl)
 
-def centre_sbatch(input_npt):
+def centre_sbatch(input_npt: int) -> None:
+    """
+    Creates the sbatch script to submit centre job.
+
+    Inputs:
+        input_npt (int): current npt number
+
+    Output: None
+    """
     file = "centre-npt" + str(input_npt) + ".sh"
     s= sbatch_string("centre_npt{}".format(input_npt))
     sh = "module load vmd\nvmd -e centre-npt{}.tcl".format(input_npt)
@@ -249,14 +264,14 @@ def centre_sbatch(input_npt):
         f.write(s)
         f.write(sh)
 
-def read_minmax(input):
+def read_minmax(input: str) -> list:
     """
-    Reads the values after measuring minmax and changes respective global variables.
+    Reads the values after measuring minmax and stores values in an array.
 
     Inputs:
         input (string): file name to read from
 
-    Output: None
+    Output: an array containing the minimum and maximum values (list)
     """
     array = []
     f = open(input, "r")
@@ -267,14 +282,14 @@ def read_minmax(input):
     f.close()
     return array
 
-def read_centre(input):
+def read_centre(input: str) -> list:
     """
-    Reads the values after measuring centre and changes respective global variables.
+    Reads the values after measuring centre and stores values in an array.
 
     Inputs:
         input (string): file name to read from
 
-    Output: None
+    Output: an array containing the centre values (list)
     """
     array = []
     f = open(input, "r")
@@ -285,7 +300,15 @@ def read_centre(input):
     f.close()
     return array
 
-def job_submit(input_npt):
+def job_submit(input_npt: int) -> None:
+    """
+    Creates the sbatch script to submit the npt production run.
+
+    Inputs:
+        input_npt (int): current npt number
+
+    Output: None
+    """
     file = "npt" + str(input_npt) + "-consec.sh"
     s = sbatch_string("npt{}-consec".format(input_npt))
     input = conf_root + str(input_npt)
@@ -294,7 +317,15 @@ def job_submit(input_npt):
         f.write(s)
         f.write(sh)
 
-def smart_submit(job_name):
+def smart_submit(job_name: str) -> None:
+    """
+    Submits a job and checks for the job's completion in the queue.
+
+    Inputs:
+        job_name (string): name of the script to be submitted, including file extension
+
+    Output: None
+    """
     cmd = os.popen("sbatch " + job_name)
     time.sleep(2)
     jobid = re.search("(\d+)", cmd.readlines()[0]).group(1)
