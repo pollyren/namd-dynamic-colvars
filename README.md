@@ -1,1 +1,1 @@
-# namd-consecutive-colvars
+# namd-dynamic-colvars
