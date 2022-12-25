@@ -16,7 +16,7 @@ def sbatch_string(job_name):
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(input_npt, harwall_force, distance):
+def create_colvars(input_npt, harwall_force, distance = 5):
     """
     Creates the colvars file for a single npt run.
 
@@ -55,39 +55,39 @@ def create_colvars(input_npt, harwall_force, distance):
 
     file = colv_root + str(input_npt) + ".conf"
     with open(file, "w") as f:
-        f.write("# colvars for npt{}", input_npt)
+        f.write("# colvars for npt{}\n".format(str(input_npt)))
         # x colvars
         f.write("colvar {\n\tname xCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {")
-        f.write(' '.join(index_list))
-        f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom ({},{},{}})\n\t\t}\n\t\taxis {\n\t\t\t(1, 0, 0)\n\t\t}\n\t}\n}".format(midx, midy, midz))
+        f.write(' '.join(str(ind) for ind in index_list))
+        f.write("}}\n\t\t}}\n\t\tref {{\n\t\t\tdummyAtom ({},{},{})\n\t\t}}\n\t\taxis {{\n\t\t\t(1, 0, 0)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
         # print("harmonic {\n\tcolvars\txCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
         f.write(
-            "harmonicWalls {\n\tcolvars xCOM" + 
+            "\n\nharmonicWalls {\n\tcolvars xCOM" + 
             "\n\tlowerWalls " + str(minx) + 
             "\n\tupperWalls " + str(maxx) + 
-            "\n\tforceConstant {}\n}\n".format(harwall_force))
+            "\n\tforceConstant {}\n}}\n".format(harwall_force))
 
         # y colvars
         f.write("colvar {\n\tname yCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
-        f.write(' '.join(index_list))
-        f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom ({},{},{})\n\t\t}\n\t\taxis {\n\t\t\t(0, 1, 0)\n\t\t}\n\t}\n}".format(midx, midy, midz))
+        f.write(' '.join(str(ind) for ind in index_list))
+        f.write("}}\n\t\t}}\n\t\tref {{\n\t\t\tdummyAtom ({},{},{})\n\t\t}}\n\t\taxis {{\n\t\t\t(0, 1, 0)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
         # print("harmonic {\n\tcolvars\tyCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
         f.write(
-            "harmonicWalls {\n\tcolvars yCOM" + 
+            "\n\nharmonicWalls {\n\tcolvars yCOM" + 
             "\n\tlowerWalls " + str(miny) + 
             "\n\tupperWalls " + str(maxy) + 
-            "\n\tforceConstant {}\n}\n".format(harwall_force))
+            "\n\tforceConstant {}\n}}\n".format(harwall_force))
 
         # z colvars
         f.write("colvar {\n\tname zCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
-        f.write(' '.join(index_list))
-        f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom ({},{},{})\n\t\t}\n\t\taxis {\n\t\t\t(0, 0, 1)\n\t\t}\n\t}\n}".format(midx, midy, midz))
+        f.write(' '.join(str(ind) for ind in index_list))
+        f.write("}}\n\t\t}}\n\t\tref {{\n\t\t\tdummyAtom ({},{},{})\n\t\t}}\n\t\taxis {{\n\t\t\t(0, 0, 1)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
         # print("harmonic {\n\tcolvars\tzCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
         f.write(
-            "harmonicWalls {\n\tcolvars zCOM" + 
+            "\n\nharmonicWalls {\n\tcolvars zCOM" + 
             "\n\tlowerWalls " + str(minz) + 
             "\n\tupperWalls " + str(maxz) + 
-            "\n\tforceConstant {}\n}".format(harwall_force))
+            "\n\tforceConstant {}\n}}".format(harwall_force))
 
 def create_conf(input_npt, npt_steps): 
     """
@@ -171,7 +171,7 @@ cellOrigin	            0.00       0.00      0.00
 #---------------PME Parameters -------------------------------------------------------------
 PME		                yes
 PMEGridSpacing	        0.6
-run {}'''.format(input_npt, input_npt+1, input_npt+1, input_npt+1, npt_steps)
+run {}'''.format(input_npt-1, input_npt, input_npt, input_npt, npt_steps)
     with open(file, "w") as f:
         f.write(config)
 
@@ -265,12 +265,7 @@ def read_minmax(input):
         array.append(float(line))
         line = f.readline()
     f.close()
-    minx = array[0]
-    miny = array[1]
-    minz = array[2]
-    maxx = array[3]
-    maxy = array[4]
-    maxz = array[5]
+    return array
 
 def read_centre(input):
     """
@@ -286,6 +281,7 @@ def read_centre(input):
     line = f.readline()
     while line:
         array.append(float(line))
+        line = f.readline()
     f.close()
     return array
 
@@ -303,10 +299,10 @@ def smart_submit(job_name):
     time.sleep(2)
     jobid = re.search("(\d+)", cmd.readlines()[0]).group(1)
     cmd.close()
-    # print(jobid)
+    print(jobid)
     while True:
         time.sleep(60)
-        squeue = os.popen("squeue -u {}".format(username))
+        squeue = os.popen("squeue -u pollyren")
         time.sleep(2)
         queue = "\n".join(squeue.readlines())
         squeue.close()
@@ -316,7 +312,7 @@ def smart_submit(job_name):
 if __name__ == "__main__":
     """
     Usage: python consec_colvars.py start_npt total_runs_per_distance decrement_dist npt_steps harwall_force
-           start_npt (int): starting npt number
+           start_npt (int): starting npt number, the first npt to be run
            num_npts (int): total number of npts to be run
            start_distance (int): beginning wall distance from the minmax of the protein
            total_runs_per_distance (int): number of npts to run at each wall distance
@@ -348,7 +344,7 @@ if __name__ == "__main__":
 
     for npt_runs in range(num_npts):
         for run in range(total_runs_per_distance):
-            npt = npt_runs * total_runs_per_distance + run
+            npt = npt_runs * total_runs_per_distance + run + start_npt
             create_minmaxtcl(npt-1)
             minmax_sbatch(npt-1)
             create_centretcl(npt-1)
