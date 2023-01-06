@@ -16,7 +16,7 @@ def sbatch_string(job_name: str) -> str:
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(input_npt: int, harwall_force: int, distance: int) -> None:
+def create_colvars(input_npt: int, harwall_force: int, distance: int, option: int) -> None:
     """
     Creates the colvars file for a single npt run.
 
@@ -24,6 +24,7 @@ def create_colvars(input_npt: int, harwall_force: int, distance: int) -> None:
         input_npt (int): current npt number
         harwall_force (int): force for harmonicWall constraint
         distance (int): distance of wall from backbone of protein
+        option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
 
     Output: None
     """
@@ -32,27 +33,28 @@ def create_colvars(input_npt: int, harwall_force: int, distance: int) -> None:
     midx = mid[0]
     midy = mid[1]
     midz = mid[2]
-    minx = minmax[0]
-    miny = minmax[1]
-    minz = minmax[2]
-    maxx = minmax[3]
-    maxy = minmax[4]
-    maxz = minmax[5]
-    # # take the larger difference so the protein COM is the centre of the box
-    # deltax = max(midx - raw_minx, raw_maxx - midx)
-    # deltay = max(midy - raw_miny, raw_maxy - midy)
-    # deltaz = max(midz - raw_minz, raw_maxz - midz)
-    # # create adjusted min and max values
-    # minx, maxx = midx - deltax, midx + deltax
-    # miny, maxy = midy - deltay, midy + deltay
-    # minz, maxz = midz - deltaz, midz + deltaz
+    minx = raw_minx = minmax[0]
+    miny = raw_miny = minmax[1]
+    minz = raw_minz = minmax[2]
+    maxx = raw_maxx = minmax[3]
+    maxy = raw_maxy = minmax[4]
+    maxz = raw_maxz = minmax[5]
+    if option == 2:
+        # take the larger difference so the protein COM is the centre of the box
+        deltax = max(midx - raw_minx, raw_maxx - midx)
+        deltay = max(midy - raw_miny, raw_maxy - midy)
+        deltaz = max(midz - raw_minz, raw_maxz - midz)
+        # create adjusted min and max values
+        minx, maxx = midx - deltax, midx + deltax
+        miny, maxy = midy - deltay, midy + deltay
+        minz, maxz = midz - deltaz, midz + deltaz
     # reduce by distance of wall from protein
-    minx -= distance
-    miny -= distance
-    minz -= distance
-    maxx += distance
-    maxy += distance
-    maxz += distance
+    minx += distance
+    miny += distance
+    minz += distance
+    maxx -= distance
+    maxy -= distance
+    maxz -= distance
 
     file = colv_root + str(input_npt) + ".conf"
     with open(file, "w") as f:
@@ -348,12 +350,14 @@ if __name__ == "__main__":
            total_runs_per_distance (int): number of npts to run at each wall distance
            npt_steps (int): number of steps between wall recalculation 
            harwall_force (int): force of colvars harmonic wall
+           option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
     """
     start_npt = int(sys.argv[1])
     distance = int(sys.argv[2])
     total_runs_per_distance = int(sys.argv[3])
     npt_steps = int(sys.argv[4])
     harwall_force = int(sys.argv[5])
+    option = int(sys.argv[6])
 
     global username
     name = os.popen("whoami")
@@ -378,7 +382,7 @@ if __name__ == "__main__":
         centre_sbatch(npt-1)
         smart_submit("minmax-npt{}.sh".format(str(npt-1)))  # edit sbatch functions so that file name is returned?
         smart_submit("centre-npt{}.sh".format(str(npt-1)))
-        create_colvars(npt, harwall_force, distance)
+        create_colvars(npt, harwall_force, distance, option)
         create_conf(npt, npt_steps)
         job_submit(npt)
         smart_submit("npt{}-consec.sh".format(str(npt)))
