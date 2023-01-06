@@ -31,7 +31,7 @@ def create_individual_sbatch(job_num: int, start_npt: int, distance: float, tota
     job_name = "run{}".format(job_num)
     sbatch = sbatch_string(job_name)
     file = job_name + ".sh"
-    cmd = "module load python\npython consec_colvars.py {} {} {} {} {}".format(start_npt, distance, total_runs_per_distance, npt_steps, harwall_force, option)
+    cmd = "module load python\npython consec_colvars.py {} {} {} {} {} {}".format(start_npt, distance, total_runs_per_distance, npt_steps, harwall_force, option)
     with open(file, "w") as f:
         f.write(sbatch)
         f.write(cmd)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
     for job in range(num_npts):
         start_npt = job * total_runs_per_distance + first
-        jobs.append(create_individual_sbatch(job, start_npt, distance, total_runs_per_distance, npt_steps, harwall_force))
+        jobs.append(create_individual_sbatch(job, start_npt, distance, total_runs_per_distance, npt_steps, harwall_force, option))
         distance -= decrement_dist
 
     create_dependency_sh(jobs)
