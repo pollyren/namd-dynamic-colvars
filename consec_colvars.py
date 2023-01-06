@@ -16,14 +16,14 @@ def sbatch_string(job_name: str) -> str:
     string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
-def create_colvars(input_npt: int, harwall_force: int, distance: int, option: int) -> None:
+def create_colvars(input_npt: int, harwall_force: float, distance: float, option: int) -> None:
     """
     Creates the colvars file for a single npt run.
 
     Inputs:
         input_npt (int): current npt number
-        harwall_force (int): force for harmonicWall constraint
-        distance (int): distance of wall from backbone of protein
+        harwall_force (float): force for harmonicWall constraint
+        distance (float): distance of wall from backbone of protein
         option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
 
     Output: None
@@ -346,17 +346,17 @@ if __name__ == "__main__":
     """
     Usage: python consec_colvars.py start_npt total_runs_per_distance decrement_dist npt_steps harwall_force
            start_npt (int): starting npt number, the first npt to be run in this sequence
-           distance (int): wall distance from the minmax of the protein
+           distance (float): wall distance from the minmax of the protein
            total_runs_per_distance (int): number of npts to run at each wall distance
            npt_steps (int): number of steps between wall recalculation 
-           harwall_force (int): force of colvars harmonic wall
+           harwall_force (float): force of colvars harmonic wall
            option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
     """
     start_npt = int(sys.argv[1])
-    distance = int(sys.argv[2])
+    distance = float(sys.argv[2])
     total_runs_per_distance = int(sys.argv[3])
     npt_steps = int(sys.argv[4])
-    harwall_force = int(sys.argv[5])
+    harwall_force = float(sys.argv[5])
     option = int(sys.argv[6])
 
     global username
