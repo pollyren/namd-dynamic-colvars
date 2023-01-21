@@ -49,12 +49,12 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
         miny, maxy = midy - deltay, midy + deltay
         minz, maxz = midz - deltaz, midz + deltaz
     # reduce by distance of wall from protein
-    minx += distance
-    miny += distance
-    minz += distance
-    maxx -= distance
-    maxy -= distance
-    maxz -= distance
+    minx -= distance
+    miny -= distance
+    minz -= distance
+    maxx += distance
+    maxy += distance
+    maxz += distance
 
     file = colv_root + str(input_npt) + ".conf"
     with open(file, "w") as f:
@@ -62,7 +62,7 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
         # x colvars
         f.write("colvar {\n\tname xCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {")
         f.write(' '.join(str(ind) for ind in index_list))
-        f.write("}}\n\t\t}}\n\t\tref {{\n\t\t\tdummyAtom ({},{},{})\n\t\t}}\n\t\taxis {{\n\t\t\t(1, 0, 0)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
+        f.write("}}\n\t\t}}\n\t\tref {{\n\t\t}}\n\t\taxis {{\n\t\t\t(1, 0, 0)\n\t\t}}\n\t}}\n}}")
         # print("harmonic {\n\tcolvars\txCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
         f.write(
             "\n\nharmonicWalls {\n\tcolvars xCOM" + 
@@ -73,7 +73,7 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
         # y colvars
         f.write("colvar {\n\tname yCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
         f.write(' '.join(str(ind) for ind in index_list))
-        f.write("}}\n\t\t}}\n\t\tref {{\n\t\t\tdummyAtom ({},{},{})\n\t\t}}\n\t\taxis {{\n\t\t\t(0, 1, 0)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
+        f.write("}}\n\t\t}}\n\t\tref {{\n\t\taxis {{\n\t\t\t(0, 1, 0)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
         # print("harmonic {\n\tcolvars\tyCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
         f.write(
             "\n\nharmonicWalls {\n\tcolvars yCOM" + 
@@ -84,7 +84,7 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
         # z colvars
         f.write("colvar {\n\tname zCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
         f.write(' '.join(str(ind) for ind in index_list))
-        f.write("}}\n\t\t}}\n\t\tref {{\n\t\t\tdummyAtom ({},{},{})\n\t\t}}\n\t\taxis {{\n\t\t\t(0, 0, 1)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
+        f.write("}}\n\t\t}}\n\t\tref {{\n\t\taxis {{\n\t\t\t(0, 0, 1)\n\t\t}}\n\t}}\n}}".format(midx, midy, midz))
         # print("harmonic {\n\tcolvars\tzCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
         f.write(
             "\n\nharmonicWalls {\n\tcolvars zCOM" + 
@@ -380,10 +380,9 @@ if __name__ == "__main__":
         minmax_sbatch(npt-1)
         create_centretcl(npt-1)
         centre_sbatch(npt-1)
-        smart_submit("minmax-npt{}.sh".format(str(npt-1)))  # edit sbatch functions so that file name is returned?
+        smart_submit("minmax-npt{}.sh".format(str(npt-1)))  
         smart_submit("centre-npt{}.sh".format(str(npt-1)))
         create_colvars(npt, harwall_force, distance, option)
         create_conf(npt, npt_steps)
         job_submit(npt)
         smart_submit("npt{}-consec.sh".format(str(npt)))
-        # start_distance -= decrement_dist
