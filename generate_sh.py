@@ -10,7 +10,10 @@ def sbatch_string(job_name: str) -> str:
 
     Output: a string containing the header of the sbatch file (string)
     """
-    string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
+    if cluster == 1:
+        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=beagle3\n#SBATCH --nodes=1\n#SBATCH --ntasks-per-node=1\n#SBATCH --account=beagle3-exusers\n\n".format(str(job_name))
+    elif cluster == 0: 
+        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=1\n#SBATCH --ntasks-per-node=1\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
 def create_individual_sbatch(job_num: int, start_npt: int, distance: float, total_runs_per_distance: int, npt_steps: int, harwall_force: float, option: int) -> str:
@@ -25,13 +28,14 @@ def create_individual_sbatch(job_num: int, start_npt: int, distance: float, tota
         npt_steps (int): the number of steps between wall recalculation 
         harwall_force (float): the force of colvars harmonic wall
         option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
+        beagle/midway3 (int): 0 = midway3, 1 = beagle
 
     Output: the file name of the bash submit script (string)
     """
     job_name = "run{}".format(job_num)
     sbatch = sbatch_string(job_name)
     file = job_name + ".sh"
-    cmd = "module load python\npython consec_colvars.py {} {} {} {} {} {}".format(start_npt, distance, total_runs_per_distance, npt_steps, harwall_force, option)
+    cmd = "module load python\npython consec_colvars.py {} {} {} {} {} {} {}".format(start_npt, distance, total_runs_per_distance, npt_steps, harwall_force, option, cluster)
     with open(file, "w") as f:
         f.write(sbatch)
         f.write(cmd)
@@ -69,6 +73,8 @@ if __name__ == "__main__":
            decrement_dist (int): amount to lower wall by after each npt
            npt_steps (int): number of steps between wall recalculation 
            harwall_force (int): force of colvars harmonic wall
+           option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
+           beagle/midway3 (int): 0 = midway3, 1 = beagle
     """
     if sys.argv[1] == "-h":
         print(" Usage: python generate_sh.py first_npt num_npts distance total_runs_per_distance decrement_dist npt_steps harwall_force")
@@ -80,6 +86,8 @@ if __name__ == "__main__":
         print("        decrement_dist (float): amount to lower wall by")
         print("        npt_steps (int): number of steps between wall recalculation")
         print("        harwall_force (float): force of colvars harmonic wall")
+        print("        option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein")
+        print("        beagle/midway3 (int): 0 = midway3, 1 = beagle")
         sys.exit()
 
     first = int(sys.argv[1])
@@ -90,6 +98,8 @@ if __name__ == "__main__":
     npt_steps = int(sys.argv[6])
     harwall_force = float(sys.argv[7])
     option = int(sys.argv[8])
+    global cluster
+    cluster = int(sys.argv[9])
 
     jobs = []
 

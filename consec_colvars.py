@@ -13,7 +13,10 @@ def sbatch_string(job_name: str) -> str:
 
     Output: a string containing the header of the sbatch file (string)
     """
-    string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
+    if cluster == 1:
+        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=3:00:00\n#SBATCH --exclusive\n#SBATCH --partition=beagle3\n#SBATCH --nodes=5\n#SBATCH --ntasks-per-node=32\n#SBATCH --account=beagle3-exusers\n\n".format(str(job_name))
+    elif cluster == 0: 
+        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=3:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
 def create_colvars(input_npt: int, harwall_force: float, distance: float, option: int) -> None:
@@ -59,38 +62,74 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
     file = colv_root + str(input_npt) + ".conf"
     with open(file, "w") as f:
         f.write("# colvars for npt{}\n".format(str(input_npt)))
-        # x colvars
-        f.write("colvar {\n\tname xCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {")
-        f.write(' '.join(str(ind) for ind in index_list))
-        f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(1, 0, 0)\n\t\t}\n\t}\n}")
-        # print("harmonic {\n\tcolvars\txCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
-        f.write(
-            "\n\nharmonicWalls {\n\tcolvars xCOM" + 
-            "\n\tlowerWalls " + str(minx) + 
-            "\n\tupperWalls " + str(maxx) + 
-            "\n\tforceConstant {}\n}}\n".format(harwall_force))
+        # print x colvars
+        for i in range(length):
+            f.write(
+                "colvar {\n\tname x" + str(index_list[i]) + "\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers " + str(index_list[i]) + "\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(1, 0, 0)\n\t\t}\n\t}\n}\n")
 
-        # y colvars
-        f.write("colvar {\n\tname yCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
-        f.write(' '.join(str(ind) for ind in index_list))
-        f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(0, 1, 0)\n\t\t}\n\t}\n}")
-        # print("harmonic {\n\tcolvars\tyCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
+        # update lowerWalls, upperWalls, forceConstant
         f.write(
-            "\n\nharmonicWalls {\n\tcolvars yCOM" + 
-            "\n\tlowerWalls " + str(miny) + 
-            "\n\tupperWalls " + str(maxy) + 
-            "\n\tforceConstant {}\n}}\n".format(harwall_force))
+            "harmonicWalls {\n\tcolvars " + " ".join(["x"+str(ind) for ind in index_list]) + 
+            "\n\tlowerWalls " + (str(minx) + " ") * length + 
+            "\n\tupperWalls " + (str(maxx) + " ") * length + 
+            "\n\tforceConstant {}\n}".format(harwall_force))
 
-        # z colvars
-        f.write("colvar {\n\tname zCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
-        f.write(' '.join(str(ind) for ind in index_list))
-        f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(0, 0, 1)\n\t\t}\n\t}\n}")
-        # print("harmonic {\n\tcolvars\tzCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
+        # print y colvars
+        for i in range(length):
+            f.write(
+                "colvar {\n\tname y" + str(index_list[i]) + "\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers " + str(index_list[i]) + "\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(0, 1, 0)\n\t\t}\n\t}\n}\n")
+
+        # update lowerWalls, upperWalls, forceConstant
         f.write(
-            "\n\nharmonicWalls {\n\tcolvars zCOM" + 
-            "\n\tlowerWalls " + str(minz) + 
-            "\n\tupperWalls " + str(maxz) + 
-            "\n\tforceConstant {}\n}}".format(harwall_force))
+            "harmonicWalls {\n\tcolvars " + " ".join(["y"+str(ind) for ind in index_list]) + 
+            "\n\tlowerWalls " + (str(miny) + " ") * length + 
+            "\n\tupperWalls " + (str(maxy) + " ") * length + 
+            "\n\tforceConstant {}\n}".format(harwall_force))
+
+        # print z colvars
+        for i in range(length):
+            f.write(
+                "colvar {\n\tname z" + str(index_list[i]) + "\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers " + str(index_list[i]) + "\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(0, 0, 1)\n\t\t}\n\t}\n}\n")
+
+        # update lowerWalls, upperWalls, forceConstant
+        f.write(
+            "harmonicWalls {\n\tcolvars " + " ".join(["z"+str(ind) for ind in index_list]) + 
+            "\n\tlowerWalls " + (str(minz) + " ") * length + 
+            "\n\tupperWalls " + (str(maxz) + " ") * length + 
+            "\n\tforceConstant {}\n}".format(harwall_force))
+
+        # # x colvars
+        # f.write("colvar {\n\tname xCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {")
+        # f.write(' '.join(str(ind) for ind in index_list))
+        # f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(1, 0, 0)\n\t\t}\n\t}\n}")
+        # # print("harmonic {\n\tcolvars\txCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
+        # f.write(
+        #     "\n\nharmonicWalls {\n\tcolvars xCOM" + 
+        #     "\n\tlowerWalls " + str(minx) + 
+        #     "\n\tupperWalls " + str(maxx) + 
+        #     "\n\tforceConstant {}\n}}\n".format(harwall_force))
+
+        # # y colvars
+        # f.write("colvar {\n\tname yCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
+        # f.write(' '.join(str(ind) for ind in index_list))
+        # f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(0, 1, 0)\n\t\t}\n\t}\n}")
+        # # print("harmonic {\n\tcolvars\tyCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
+        # f.write(
+        #     "\n\nharmonicWalls {\n\tcolvars yCOM" + 
+        #     "\n\tlowerWalls " + str(miny) + 
+        #     "\n\tupperWalls " + str(maxy) + 
+        #     "\n\tforceConstant {}\n}}\n".format(harwall_force))
+
+        # # z colvars
+        # f.write("colvar {\n\tname zCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {"),
+        # f.write(' '.join(str(ind) for ind in index_list))
+        # f.write("}\n\t\t}\n\t\tref {\n\t\t\tdummyAtom (0, 0, 0)\n\t\t}\n\t\taxis {\n\t\t\t(0, 0, 1)\n\t\t}\n\t}\n}")
+        # # print("harmonic {\n\tcolvars\tzCOM\n\tcenters\t0\n\tforceConstant\t10\n}")
+        # f.write(
+        #     "\n\nharmonicWalls {\n\tcolvars zCOM" + 
+        #     "\n\tlowerWalls " + str(minz) + 
+        #     "\n\tupperWalls " + str(maxz) + 
+        #     "\n\tforceConstant {}\n}}".format(harwall_force))
 
 def create_conf(input_npt: int, npt_steps: int) -> None: 
     """
@@ -351,6 +390,7 @@ if __name__ == "__main__":
            npt_steps (int): number of steps between wall recalculation 
            harwall_force (float): force of colvars harmonic wall
            option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
+           beagle/midway3 (int): 0 = midway3, 1 = beagle
     """
     start_npt = int(sys.argv[1])
     distance = float(sys.argv[2])
@@ -358,6 +398,8 @@ if __name__ == "__main__":
     npt_steps = int(sys.argv[4])
     harwall_force = float(sys.argv[5])
     option = int(sys.argv[6])
+    global cluster
+    cluster = int(sys.argv[7])
 
     global username
     name = os.popen("whoami")
@@ -372,6 +414,7 @@ if __name__ == "__main__":
     index = "0 4 17 18 19 21 34 35 36 38 53 54 55 57 73 74 75 77 89 90 91 93 111 112 113 115 125 126 127 129 144 145 146 148 158 159 160 162 165 166 167 169 187 188 189 191 201 202 203 205 220 221 222 224 234 235 236 238 253 254 255 257 268 269 270 272 284 285 286 288 299 300 301 305 313 314 315 317 324 325 326 328 336 337 338 340 350 351 352 354 369 370 371 373 384 385 386 388 398 399 400 402 414 415 416 418 436 437 438 440 446 447 448 450 468 469 470 472 487 488 489 491 504 505 506 508 516 517 518 520 538 539 540 542 553 554 555 557 560 561 562 564 579 580 581 585 593 594 595 599 607 608 609 611 619 620 621 623 636 637 638 640 653 654 655 657 677 678 679 681 696 697 698 700 715 716 717 719 735 736 737 739 745 746 747 749 752 753 754 756 774 775 776 778 791 792 793 795 810 811 812 814 825 826 827 829 837 838 839 841 844 845 846 848 868 869 870 872 882 883 884 886 901 902 903 905 912 913 914 916 924 925 926 928 945 946 947 949 959 960 961 963 978 979 980 982 995 996 997 999 1017 1018 1019 1021 1032 1033 1034 1036 1043 1044 1045 1047 1057 1058 1059 1061 1076 1077 1078 1080 1093 1094 1095 1097 1112 1113 1114 1116 1128 1129 1130 1132 1147 1148 1149 1151 1171 1172 1173"
     index_list = index.split()
     index_list = [int(i) + 1 for i in index_list]   # increment indices by 1 for colvars because colvar indexing is 1-based
+    length = len(index_list)
 
     # for npt_runs in range(num_npts):
     for run in range(total_runs_per_distance):
