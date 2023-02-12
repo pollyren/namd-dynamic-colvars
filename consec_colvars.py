@@ -4,19 +4,20 @@ import os
 import time
 import re
 
-def sbatch_string(job_name: str) -> str:
+def sbatch_string(job_name: str, nodes = 5) -> str:
     """
     Generates a string for the sbatch file header.
 
     Inputs:
         job_name (string): name of the job
+        nodes [optional]: number of nodes for the job
 
     Output: a string containing the header of the sbatch file (string)
     """
     if cluster == 1:
-        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=3:00:00\n#SBATCH --exclusive\n#SBATCH --partition=beagle3\n#SBATCH --nodes=5\n#SBATCH --ntasks-per-node=32\n#SBATCH --account=beagle3-exusers\n\n".format(str(job_name))
+        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=3:00:00\n#SBATCH --exclusive\n#SBATCH --partition=beagle3\n#SBATCH --nodes={}\n#SBATCH --ntasks-per-node=32\n#SBATCH --account=beagle3-exusers\n\n".format(str(job_name), nodes)
     elif cluster == 0: 
-        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=3:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=6\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
+        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=3:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes={}\n#SBATCH --ntasks-per-node=48\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name), nodes)
     return string
 
 def create_colvars(input_npt: int, harwall_force: float, distance: float, option: int) -> None:
@@ -72,7 +73,7 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
             "harmonicWalls {\n\tcolvars " + " ".join(["x"+str(ind) for ind in index_list]) + 
             "\n\tlowerWalls " + (str(minx) + " ") * length + 
             "\n\tupperWalls " + (str(maxx) + " ") * length + 
-            "\n\tforceConstant {}\n}".format(harwall_force))
+            "\n\tforceConstant {}\n}}".format(harwall_force))
 
         # print y colvars
         for i in range(length):
@@ -84,7 +85,7 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
             "harmonicWalls {\n\tcolvars " + " ".join(["y"+str(ind) for ind in index_list]) + 
             "\n\tlowerWalls " + (str(miny) + " ") * length + 
             "\n\tupperWalls " + (str(maxy) + " ") * length + 
-            "\n\tforceConstant {}\n}".format(harwall_force))
+            "\n\tforceConstant {}\n}}".format(harwall_force))
 
         # print z colvars
         for i in range(length):
@@ -96,7 +97,7 @@ def create_colvars(input_npt: int, harwall_force: float, distance: float, option
             "harmonicWalls {\n\tcolvars " + " ".join(["z"+str(ind) for ind in index_list]) + 
             "\n\tlowerWalls " + (str(minz) + " ") * length + 
             "\n\tupperWalls " + (str(maxz) + " ") * length + 
-            "\n\tforceConstant {}\n}".format(harwall_force))
+            "\n\tforceConstant {}\n}}".format(harwall_force))
 
         # # x colvars
         # f.write("colvar {\n\tname xCOM\n\tdistanceZ {\n\t\tmain {\n\t\t\tatomNumbers {")
@@ -256,7 +257,7 @@ def minmax_sbatch(input_npt: int) -> None:
     Output: None
     """
     file = "minmax-npt" + str(input_npt) + ".sh"
-    s = sbatch_string("minmax_npt{}".format(input_npt))
+    s = sbatch_string("minmax_npt{}".format(input_npt), 1)
     sh = "module load vmd\nvmd -e minmax-npt{}.tcl".format(input_npt)
     with open(file, "w") as f:
         f.write(s)
@@ -299,7 +300,7 @@ def centre_sbatch(input_npt: int) -> None:
     Output: None
     """
     file = "centre-npt" + str(input_npt) + ".sh"
-    s= sbatch_string("centre_npt{}".format(input_npt))
+    s = sbatch_string("centre_npt{}".format(input_npt), 1)
     sh = "module load vmd\nvmd -e centre-npt{}.tcl".format(input_npt)
     with open(file, "w") as f:
         f.write(s)
