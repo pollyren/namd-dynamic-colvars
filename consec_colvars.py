@@ -232,7 +232,7 @@ def create_minmaxtcl(input_npt: int) -> None:
 set dcd  ubq-consec-npt{}.dcd
 mol load psf $psf dcd $dcd
 
-set sel [atomselect top "protein" frame last]
+set sel [atomselect top "backbone" frame last]
 set measure [measure minmax $sel]
 
 set outfile [open ./minmax_npt{}.dat w]
@@ -277,7 +277,7 @@ def create_centretcl(input_npt: int) -> None:
 set dcd  ubq-consec-npt{}.dcd
 mol load psf $psf dcd $dcd
 
-set sel [atomselect top "protein" frame last]
+set sel [atomselect top "backbone" frame last]
 set measure [measure center $sel]
 
 set outfile [open ./centre_npt{}.dat w]
