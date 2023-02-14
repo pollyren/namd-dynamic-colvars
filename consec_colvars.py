@@ -356,7 +356,10 @@ def job_submit(input_npt: int) -> None:
     file = "npt" + str(input_npt) + "-consec.sh"
     s = sbatch_string("npt{}-consec".format(input_npt))
     input = conf_root + str(input_npt)
-    sh = "module load namd/2.14\n\nmpiexec.hydra -bootstrap=slurm namd2 \"{}.conf\" > \"{}.log\"".format(input, input)
+    if cluster == 2:
+        sh = "module load oneapi/2021.beta7\nsource /software/oneapi-2021.beta7-el7-x86_64/inteloneapi/setvars.sh\n\nexport NAMD_HOME=/software/namd-2.14-el7-x86_64+oneapi-2021/bin\n\nrsh\nexport CONV_RSH=ssh\n\nPPN=$SLURM_NTASKS_PER_NODE\nP=$(( PPN * SLURM_NNODES ))\n\nmpirun -np $P $NAMD_HOME/namd2 ubq-consec-npt{}.conf > ubq-consec-npt{}.log".format(input, input)
+    else:
+        sh = "module load namd/2.14\n\nmpiexec.hydra -bootstrap=slurm namd2 \"{}.conf\" > \"{}.log\"".format(input, input)
     with open(file, "w") as f:
         f.write(s)
         f.write(sh)

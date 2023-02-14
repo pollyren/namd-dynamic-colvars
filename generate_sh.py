@@ -30,7 +30,7 @@ def create_individual_sbatch(job_num: int, start_npt: int, distance: float, tota
         npt_steps (int): the number of steps between wall recalculation 
         harwall_force (float): the force of colvars harmonic wall
         option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein
-        beagle/midway3 (int): 0 = midway3, 1 = beagle
+        beagle/midway3 (int): 0 = midway3, 1 = beagle, 2 = midway2
 
     Output: the file name of the bash submit script (string)
     """
