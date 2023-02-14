@@ -14,6 +14,8 @@ def sbatch_string(job_name: str) -> str:
         string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=beagle3\n#SBATCH --nodes=1\n#SBATCH --ntasks-per-node=1\n#SBATCH --account=beagle3-exusers\n\n".format(str(job_name))
     elif cluster == 0: 
         string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=caslake\n#SBATCH --nodes=1\n#SBATCH --ntasks-per-node=1\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
+    elif cluster == 2:
+        string = "#!/bin/sh\n#SBATCH --job-name={}\n#SBATCH --time=36:00:00\n#SBATCH --exclusive\n#SBATCH --partition=broadwl\n#SBATCH --nodes=1\n#SBATCH --ntasks-per-node=1\n#SBATCH --account=pi-haddadian\n\n".format(str(job_name))
     return string
 
 def create_individual_sbatch(job_num: int, start_npt: int, distance: float, total_runs_per_distance: int, npt_steps: int, harwall_force: float, option: int) -> str:
@@ -87,7 +89,7 @@ if __name__ == "__main__":
         print("        npt_steps (int): number of steps between wall recalculation")
         print("        harwall_force (float): force of colvars harmonic wall")
         print("        option (int): 1 = set wall from edge of protein, 2 = set wall symmetric from COM of protein")
-        print("        beagle/midway3 (int): 0 = midway3, 1 = beagle")
+        print("        beagle/midway3 (int): 0 = midway3, 1 = beagle, 2 = midway2")
         sys.exit()
 
     first = int(sys.argv[1])
